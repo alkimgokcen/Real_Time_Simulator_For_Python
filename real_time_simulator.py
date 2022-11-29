@@ -43,16 +43,15 @@ END     = 5
 #---------------------------------------------------------
 
 class REAL_TIME_PACER:
-    
-    # Variable          Definition                                          Defaults
-    # ==============    ==================================================  ============================
-    # SimulationTime => defines the simulation duration in seconds.         (Default = 1 seconds)
-    # samplingTime   => defines the sampling period for solver in seconds.  (Default = 0.01 seconds)
-    # sampleLength   => defines the necessary iteration number for sim.     (Default = 100 iteration)
-    # ==================================================================================================
-    def __init__(self, simulationTime = 1, samplingTime = 1e-2):
+    # Variable          Definition                                             Defaults
+    # ==============    ==================================================     ============================
+    # externalFunction  => process function as an argument of the class.
+    # SimulationTime    => defines the simulation duration in seconds.         (Default = 1 seconds)
+    # samplingTime      => defines the sampling period for solver in seconds.  (Default = 0.01 seconds)
+    # =====================================================================================================
+    def __init__(self, externalFunction, simulationTime = 1, samplingTime = 1e-2):
         
-        self.SoftwareVersion = "1.0.0"
+        self.SoftwareVersion = "1.0.0" # manipulate only when stable versions are changed!
         
         if simulationTime <= 0:
             print("Simulation time must be positive!")
@@ -61,6 +60,9 @@ class REAL_TIME_PACER:
         if samplingTime <= 0:
             print("Sampling period must be positive!")
 
+        # assign the externally defined process function to self object.
+        self.processFunction = externalFunction
+        
         self.simulationTime = simulationTime
         self.samplingTime = samplingTime
         self.INITIALIZATION = INIT
@@ -72,8 +74,8 @@ class REAL_TIME_PACER:
         # Initialization phase starts
         STATE = INIT
     
-    def someFunction(self): # temporary function to mimic the env. to simulate.
-        timerForLooping.delay(0.1) # assume that the env. process takes 0.53 seconds.
+    def getSoftwareVersion(self): # to get sofware version
+        return self.SoftwareVersion
     
     def Pacer(self, STATE):
         
@@ -97,12 +99,12 @@ class REAL_TIME_PACER:
             case self.PROCESS:
                 self.processCounter += 1 # count up the value to get how many times process is executed.
                 timerForLooping.tic() # timer is initialized to compute the elapsed time for each iteration.
-                # Calls some function. @TODO: simulation environment runs in this function.
-                # to do that, I must learn how to input a user-defined function for this calss.
-                self.someFunction()
+                                
+                # call the process.
+                self.processFunction()
                 
                 self.elapsedTime = timerForLooping.toc() # find the elapsed time.
-                print(self.elapsedTime)
+                
                 self.waitTime = self.samplingTime - self.elapsedTime # determines the wait time.(samplingTime - elapsedTime) 
                 # => overrun cases not taken into account yet
                 
@@ -139,12 +141,11 @@ class REAL_TIME_PACER:
                 self.totalSimulatedTime = timerForWholeProcess.toc()
                 print("============================================================================")
                 print(" => Simulation is over!")
-                # @TODO: Output the simulation related parameters
-                # @TODO: Close timers if necessary!
-                # @TODO: return the output parameters
+                # Output the simulation related parameters
                 print(" => Total simulated time: ", self.totalSimulatedTime, " seconds.")
                 print(" => Total Run Time: ", self.totalRunTime, " seconds.")
-                print(" => # of iteration that Overrun detected: ", self.overrunCounter, " iteration")
+                print(" => Total iteration that process is run: ", self.processCounter, " iterations")
+                print(" => # of iteration that Overrun detected: ", self.overrunCounter, " iterations")
                 print("============================================================================")
                 STATE = END
                 return STATE
@@ -157,12 +158,8 @@ class REAL_TIME_PACER:
         while True:
             
             stateInLoop = self.Pacer(stateInLoop) # loop the paceer with state
-            
+
             if stateInLoop is END:
                 break # leave the pacer.
             
             
-SIMULATION_TIME = 60 #seconds
-SAMPLING_PERIOD = 1 #seconds
-rtp = REAL_TIME_PACER(SIMULATION_TIME, SAMPLING_PERIOD)
-rtp.pacerDriver()
